@@ -160,7 +160,7 @@ class VA(Agent):
         rua_escolhida = choice(RUAS)
         direcao = choice([RUA for RUA in RUAS if RUA is not rua_escolhida])
         prioridade = choice(PRIORIDADES)
-        preferencia = choice(list(range(4)))
+        preferencia = choice(list(range(len(RUAS))))
         
         self.add(Belief("rua", (rua_escolhida)))
         self.add(Belief("direcao", (direcao)))
