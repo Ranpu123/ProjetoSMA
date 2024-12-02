@@ -35,7 +35,7 @@ RUAS = [
     "rua_D",
 ]
 
-PRIORIDADES = ["comum", "urgencia", "transporte", "emergencia"]
+PRIORIDADES = ["transporte", "urgente", "comum", "emergencia"]
 
 class Cruzamento(Environment):
     def __init__(self, env_name):
@@ -78,7 +78,6 @@ class Cruzamento(Environment):
                 ruas = [rua for rua, agt in carros_cruzamento.args.items() if agt == carro]
                 for rua in ruas:
                     del carros_cruzamento.args[rua]
-                self.delete(Percept("rua_destino", (carro, "Rua", "Valor1", "Valor2")))
                 self.print(f"{agt} liberou o carro {carro} do cruzamento na {ruas}.")
             
             ruas = self.get(Percept("carros_na_rua", ("Rua","Lista")), all= True)
@@ -206,15 +205,12 @@ class Controlador(Agent):
         respostas = args[0]
 
         preferencias = self._recuperar_preferencias(carros_cruzamento)
-        self.print(carros_cruzamento.args ,preferencias, contra)
 
         if contra:
             self.print("Lidando com Contra-proposta...")
-            self.print(f"DEBUG: {[carro for carro, resposta in respostas.items() if not resposta]}")
             for carro in [carro for carro, resposta in respostas.items() if not resposta]:
                 self.print(f"O {carro} optou por aguardar uma próxima oportunidade...")
                 ordem_carros.remove(carro)
-            self.print(f"DEBUG: ORDEM {ordem_carros}")
 
             self.print("Liberando carros do cruzamento!")
             self.liberar_carros(ordem_carros)
@@ -233,7 +229,7 @@ class Controlador(Agent):
                         ordem_carros[i_carro] = carro_troca
                         break
             self.print(f"Nova proposta gerada. Proposta anterior {ordem_atual} atual {ordem_carros}...")
-            self.add(Belief("ordem_carros", (ordem_carros)))
+
             self._recuperar_respostas(ordem_carros, 1)
 
     def _recuperar_respostas(self, ordem_carros, contra = 0):
@@ -267,6 +263,4 @@ if __name__=="__main__":
     Admin().connect_to(agents + [c1], cruzamento_channel) 
     Admin().connect_to(agents, i1)
     Admin().connect_to(c1, i1)
-    #Admin().connect_to(agents, i1)
-    #Admin().connect_to(c1, i1)
     Admin().start_system()  
