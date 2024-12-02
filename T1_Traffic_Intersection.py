@@ -98,8 +98,18 @@ class Cruzamento(Environment):
                     carros_cruzamento.args[RUA] = fila_rua.args[1][0]
                     self.change(carros_cruzamento, carros_cruzamento.args)
                     self.print(f"O {fila_rua.args[1][0]} entrou no cruzamento da rua {RUA}: {carros_cruzamento.args}")
+            else:
+                self.print(f"Ninguem na {RUA} para entrar no cruzamento")
 
         self.change(carros_cruzamento, carros_cruzamento.args)
+
+    def adicionar_ordem(self, src, ordem_carros):
+        atual = self.get(Percept("ordem_carros", "Lista"))
+        if atual:
+            self.change(atual, (ordem_carros))
+        else:
+            self.create(Percept("ordem_carros", (ordem_carros)))
+
     
 class VA(Agent):
     def __init__(self, agt_name):
@@ -172,6 +182,7 @@ class Controlador(Agent):
         carros_cruzamento = self.get(Belief("carros_cruzamento", "Dicionario"))
         if not carros_cruzamento.args:
             self.print("Nenhum carro no cruzamento para organizar.")
+            self.add(Goal("organizar_cruzamento"))
         else:
             pontuacao = {}
             for rua, carro in carros_cruzamento.args.items():
@@ -181,15 +192,14 @@ class Controlador(Agent):
             
             ordem_carros = sorted(pontuacao, key=pontuacao.get)
             self.print(f"Ordem dos carros foram processados: {ordem_carros}")
-            self.add(Belief("ordem_carros", ordem_carros))
+            self.adicionar_ordem(ordem_carros)
 
             self._recuperar_respostas(ordem_carros)
 
     @pl(gain, Goal("respostas", ("Dicionario", "Boolean")))
     def processar_respostas(self, src, args):
 
-        original = self.get(Belief("ordem_carros", "Lista"))
-        ordem_carros = original.args
+        ordem_carros = self.get(Belief("ordem_carros", "Lista")).args
         carros_cruzamento = self.get(Belief("carros_cruzamento", "Dicionario"))
 
         contra = args[1]
@@ -208,22 +218,21 @@ class Controlador(Agent):
 
             self.print("Liberando carros do cruzamento!")
             self.liberar_carros(ordem_carros)
-            self.rm(original, instant = True)
 
             self.add(Goal("organizar_cruzamento"))
         else:
             self.print("Lidando com Proposta...")
-            self.print(f"ORDEM COMEÇO: {ordem_carros}")
+            ordem_atual = ordem_carros
             for carro in [carro for carro, resposta in respostas.items() if not resposta]:
                 i_carro = ordem_carros.index(carro)
                 for pos in range(preferencias[carro], -1, -1):
                     carro_troca = ordem_carros[pos]
-                    print(f"preferencia_carro: {preferencias[carro]}, pos: {pos}, carro_troca:, {preferencias[carro_troca]}")
                     if preferencias[carro_troca] >= i_carro:
+                        self.print(f"Trocando {carro_troca} com {carro}...")
                         ordem_carros[pos] = carro
                         ordem_carros[i_carro] = carro_troca
                         break
-            self.print(f"ORDEM FINAL: {ordem_carros}")
+            self.print(f"Nova proposta gerada. Proposta anterior {ordem_atual} atual {ordem_carros}...")
             self.add(Belief("ordem_carros", (ordem_carros)))
             self._recuperar_respostas(ordem_carros, 1)
 
@@ -252,7 +261,7 @@ class Controlador(Agent):
 if __name__=="__main__":
     i1 = Cruzamento("i1")
     c1 = Controlador("c1") # conectar no ambiente
-    agents = [VA("vA") for i in range(0, 8)]
+    agents = [VA("vA") for i in range(0, 10)]
     cruzamento_channel = Channel("CruzamentoChannel")
 
     Admin().connect_to(agents + [c1], cruzamento_channel) 
